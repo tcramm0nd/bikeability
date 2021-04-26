@@ -3,20 +3,6 @@ import pandas as pd
 import datetime as dt
 import csv
 
-                   
-cities = {'Seattle':237385,
-                      'San Francisco': 111968,
-                      'Fort Collins': 112524,
-                      'Minneapolis': 136712,
-                      'Portland': 186579,
-                      'Chicago': 122604,
-                      'Eugene': 186706,
-                      'Madison': 3352040,
-                      'New York': 175905,
-                      'Cambridge': 1933745
-                      }
-
-
 class OSM_retriever():
     road_query = """(
                     way[highway=primary](area.a);
