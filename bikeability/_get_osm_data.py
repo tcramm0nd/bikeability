@@ -4,7 +4,7 @@ import datetime as dt
 import csv
 
 class OSM_retriever():
-    road_query = """(
+    ROAD_QUERY = """(
                     way[highway=primary](area.a);
                     way[highway=primary_link](area.a);
                     way[highway=residential](area.a);
@@ -18,7 +18,7 @@ class OSM_retriever():
                     
                     );"""
     
-    cycle_query = """(way[highway=cycleway](area.a);way[cycleway=lane](area.a);
+    CYCLE_QUERY = """(way[highway=cycleway](area.a);way[cycleway=lane](area.a);
                    way[cycleway=asl](area.a);way[cycleway=bike_box](area.a);
                    way[cycleway=crossing](area.a);way[cycleway=opposite_lane](area.a);
                    way[cycleway=opposite_track](area.a);way[cycleway=separate](area.a);
@@ -55,9 +55,9 @@ class OSM_retriever():
     
     def _get_query(self, query_type):
         if query_type == 'bikes':
-            return self.cycle_query
+            return self.CYCLE_QUERY
         elif query_type == 'roads':
-            return self.road_query
+            return self.ROAD_QUERY
         else:
             raise ValueError(query_type)
         

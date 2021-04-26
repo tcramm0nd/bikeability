@@ -3,14 +3,23 @@ import pandas as pd
 import requests
 from geopy.distance import distance
 import time
+import logging
     
 class API():
     ENDPOINT = 'https://overpass-api.de/api/interpreter'
     TIME_OUT = 25
     OUTPUT = 'json'
     VERBOSITY = 'geom'
+    DEBUG = True
     
     def __init__(self, **kwargs):
+        # Logging setup
+        if self.DEBUG:
+            logging.basicConfig(level=logging.DEBUG)
+        else:
+            logging.basicConfig(level=logging.INFO)
+
+        
         self.endpoint = kwargs.get("endpoint", self.ENDPOINT)
         self.time_out = kwargs.get('endpoint', self.TIME_OUT)
         
@@ -22,27 +31,10 @@ class API():
         self.output = kwargs.get("output", self.OUTPUT)
         self.verbosity = kwargs.get("verbosity", self.VERBOSITY)
         
-        # build a hierarchy and selection method to return the bounds/area to 
-        # search within
-        city = kwargs.get('city', None)
-        admin_level = kwargs.get('admin_level', None)
-        area_query = kwargs.get('area_query', None)
-        area_id = kwargs.get('area_id', None)
-
-        params ={'data': self._query_builder(search_terms, area_id)}
-        
-        start = time.perf_counter()
-        
+        self.bounds = self._get_bounds(kwargs)
+        params ={'data': self._query_builder(search_terms, self.bounds)}
         data = self._get(params)
-        
-        stop = time.perf_counter()
-        
-        self.total_time += (stop - start)
-        self.total_entries_retrieved += len(data)
-        
-        print(f'Retrieved {len(data)} entries from area: {area_id}\n\tTime: {stop-start:0.2f} seconds\n\tAttempts: {self.attempts}')
-        self.attempts = 0
-        
+
         if df:
             return pd.json_normalize(data)
         else:
@@ -50,7 +42,9 @@ class API():
         
         
     def _get(self, params):
-        self.attempts += 1
+        start = time.perf_counter()
+        attempts = 1
+
         try:
             r = requests.get(self.endpoint, params)
         except requests.exceptions.RequestException as error:
@@ -59,11 +53,17 @@ class API():
         if r.status_code == 429:
             time.sleep(self.attempts/2)
             data = self._get(params)
+            attempts += 1
         elif r.status_code != 200:
             print(f'failed with {r.status_code}')
         else:
-            data = r.json()['elements']   
-            
+            data = r.json()['elements']
+        
+        stop = time.perf_counter()
+        
+        debug = f'\nRetrieved {len(data)} entries from area: {self.bounds}\n\tTime: {stop-start:0.2f} seconds\n\tAttempts: {attempts}'
+        logging.debug(debug)
+        
         return data
             
     def _query_builder(self, search_terms, area_id):
@@ -72,7 +72,28 @@ class API():
         area_id = 3600000000 + area_id
         area = f'''area({area_id})->.a;'''
         verbosity = f'''out {self. verbosity};'''
-        return output + area + search_terms + verbosity            
+        return output + area + search_terms + verbosity
+    
+    def _get_bounds(self, kwargs):
+        
+        city = kwargs.get('city', None)
+        admin_level = kwargs.get('admin_level', None)
+        area_query = kwargs.get('area_query', None)
+        area_id = kwargs.get('area_id', None)
+        
+        if area_id:
+            return area_id
+        elif city:
+            if admin_level:
+                return city + admin_level
+            else:
+                return city
+        elif area_query:
+            return area_query
+        else:
+            raise ValueError        
+        
+        
             
 def length(geometry):
     if len(geometry) < 2:
