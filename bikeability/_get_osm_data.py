@@ -43,7 +43,7 @@ class OSM_retriever():
                    
     def __init__(self, query_type, cities, query_format=None):
         self.available_cities = self._load_cities()
-        self.query_type = self._get_query(query_type)
+        self.query = self._get_query(query_type)
         self.cities = self._get_cities(cities)
         self.query_format = self._get_format(query_format)
         
@@ -51,7 +51,7 @@ class OSM_retriever():
         api = overpass.API()
         results = {}
         for city, relation_id in self.cities.items():
-            df = api.get(self.cycle_query, area_id=relation_id)
+            df = api.get(self.query, area_id=relation_id)
             df['city'] = city
             df['length'] = df['geometry'].apply(overpass.length)
             results[city] = df
