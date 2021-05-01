@@ -1,10 +1,8 @@
-import geojson
-import pandas as pd
-import requests
-from geopy.distance import distance
-import time
 import logging
-    
+import time
+
+import requests
+
 class API():
     ENDPOINT = 'https://overpass-api.de/api/interpreter'
     TIME_OUT = 25
@@ -35,10 +33,7 @@ class API():
         params ={'data': self._query_builder(search_terms, self.bounds)}
         data = self._get(params)
 
-        if df:
-            return pd.json_normalize(data)
-        else:
-            return data
+        return data
         
         
     def _get(self, params):
@@ -91,22 +86,4 @@ class API():
         elif area_query:
             return area_query
         else:
-            raise ValueError        
-        
-        
-            
-def length(geometry):
-    if len(geometry) < 2:
-        return 0
-    else:
-        coords = [(c['lat'], c['lon']) for c in geometry]
-        length = 0
-        for i in range(0,len(coords)-1):
-            length += distance(coords[i], coords[i+1]).m
-        return length
-
-def check_bounds(min_lat, min_lon, max_lat, max_lon):
-    d = distance((min_lat, min_lon), (max_lat, max_lon)).km
-    print(d)
-    if  d > 100:
-        print('City is incorrect, please provide more details')
+            raise KeyError                

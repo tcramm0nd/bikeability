@@ -1,7 +1,12 @@
-from bikeability import overpass
-import pandas as pd
-import datetime as dt
 import csv
+import datetime as dt
+
+import pandas as pd
+
+from geopy.distance import distance
+
+from bikeability import overpass
+
 
 class OSM_retriever():
     ROAD_QUERY = """(
@@ -27,19 +32,21 @@ class OSM_retriever():
                    way[bicycle_road=yes](area.a);
                    );"""
                    
-    def __init__(self, query_type, cities, query_format=None):
+    def __init__(self, query_type, cities, results_format='All'):
         self.available_cities = self._load_cities()
         self.query = self._get_query(query_type)
         self.cities = self._get_cities(cities)
-        self.query_format = self._get_format(query_format)
+        self.results_format = self._get_format(results_format)
         
     def get(self):
         api = overpass.API()
         results = {}
         for city, relation_id in self.cities.items():
-            df = api.get(self.query, area_id=relation_id)
+            df = pd.json_normalize(api.get(self.query, area_id=relation_id))
             df['city'] = city
-            df['length'] = df['geometry'].apply(overpass.length)
+            # put into data cleaner; only raw data should be returned
+            # df['geometry'] = df['geometry'].apply(clean_geometry)
+            # df['length'] = df['geometry'].apply(calculate_length)
             results[city] = df
         self.raw_data = pd.concat(results.values(), sort=False)
         self.raw_data.reset_index(inplace=True)
@@ -63,12 +70,9 @@ class OSM_retriever():
         
     def _get_cities(self, cities):
         osm_cities = {}
-        if isinstance(cities, str):
-            input_type = 'string'
-        else:
-            input_type = 'iterable'
-                 
-        if input_type == 'string':
+        if cities.lower() == 'all':
+            osm_cities = self.available_cities     
+        elif isinstance(cities, str):
             try:
                 osm_cities[cities] = int(self.available_cities[cities])
             except KeyError:
@@ -82,8 +86,24 @@ class OSM_retriever():
                     
         return osm_cities
         
-    def _get_format(self, query_format):
-        return 'All'
+    def _get_format(self, results_format):
+        results_format = results_format.lower()
+        if results_format == 'all':
+            df_builder = self._all_builder
+        elif results_format == 'attributes':
+            df_builder = self._attribute_builder
+        elif results_format == 'geomtery':
+            df_builder = self._geomtry_builder
+        else:
+            raise ValueError('Format not currently supported')
+        return df_builder
+    
+    def _all_builder(self):
+        pass
+    def _attribute_builder(self):
+        pass
+    def _geomtry_builder(self):
+        pass
         
     def _load_cities(self):
         try:
@@ -93,4 +113,25 @@ class OSM_retriever():
         except FileNotFoundError as e:
             print(e)
         return available     
-        
+
+def clean_geometry(geometry):
+    """[summary]
+
+    Args:
+        geometry ([type]): [description]
+
+    Returns:
+        [type]: [description]
+    """
+    coordinates = [(c['lat'], c['lon']) for c in geometry]
+    
+    return coordinates
+
+def calculate_length(coordinates):
+    if len(coordinates) < 2:
+        return 0
+    else:
+        length = 0
+        for i in range(0,len(coordinates)-1):
+            length += distance(coordinates[i], coordinates[i+1]).m
+        return length
