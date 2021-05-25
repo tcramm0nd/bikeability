@@ -8,7 +8,7 @@ class API():
     TIME_OUT = 25
     OUTPUT = 'json'
     VERBOSITY = 'geom'
-    DEBUG = True
+    DEBUG = False
     
     def __init__(self, **kwargs):
         # Logging setup

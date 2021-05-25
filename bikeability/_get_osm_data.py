@@ -32,7 +32,7 @@ class OSM_retriever():
                    way[bicycle_road=yes](area.a);
                    );"""
                    
-    def __init__(self, query_type, cities, results_format='All'):
+    def __init__(self, query_type, cities='All', results_format='All'):
         self.available_cities = self._load_cities()
         self.query = self._get_query(query_type)
         self.cities = self._get_cities(cities)
@@ -45,8 +45,8 @@ class OSM_retriever():
             df = pd.json_normalize(api.get(self.query, area_id=relation_id))
             df['city'] = city
             # put into data cleaner; only raw data should be returned
-            # df['geometry'] = df['geometry'].apply(clean_geometry)
-            # df['length'] = df['geometry'].apply(calculate_length)
+            df['geometry'] = df['geometry'].apply(clean_geometry)
+            df['length'] = df['geometry'].apply(calculate_length)
             results[city] = df
         self.raw_data = pd.concat(results.values(), sort=False)
         self.raw_data.reset_index(inplace=True)
@@ -109,7 +109,7 @@ class OSM_retriever():
         try:
             with open('OSM_Relation_ID - list.csv', 'r') as f:
                 reader = csv.reader(f)
-                available = {rows[1]:rows[2] for rows in reader if rows[2] != ''}
+                available = {rows[1]:int(rows[2]) for rows in reader if rows[2] != ''}
         except FileNotFoundError as e:
             print(e)
         return available     
