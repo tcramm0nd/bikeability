@@ -57,7 +57,7 @@ class API():
         stop = time.perf_counter()
         
         debug = f'\nRetrieved {len(data)} entries from area: {self.bounds}\n\tTime: {stop-start:0.2f} seconds\n\tAttempts: {attempts}'
-        logging.debug(debug)
+        logging.info(debug)
         
         return data
             

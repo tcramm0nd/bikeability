@@ -132,3 +132,6 @@ dmypy.json
 
 # JSON Downloads
 *.json
+
+# test nb
+scratch.ipynb

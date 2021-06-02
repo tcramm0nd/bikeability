@@ -6,6 +6,7 @@ import pandas as pd
 from geopy.distance import distance
 
 from bikeability import overpass
+from bikeability import _data_utils
 
 
 class OSM_retriever():
@@ -38,18 +39,26 @@ class OSM_retriever():
         self.cities = self._get_cities(cities)
         self.results_format = self._get_format(results_format)
         
-    def get(self):
+    def get(self, clean=True):
         api = overpass.API()
         results = {}
         for city, relation_id in self.cities.items():
             df = pd.json_normalize(api.get(self.query, area_id=relation_id))
             df['city'] = city
             # put into data cleaner; only raw data should be returned
-            df['geometry'] = df['geometry'].apply(clean_geometry)
-            df['length'] = df['geometry'].apply(calculate_length)
+            if clean:
+                # df = _data_utils.clean(df)
+                df['geometry'] = df['geometry'].apply(_data_utils.clean_geometry)
+                df['length'] = df['geometry'].apply(_data_utils.calculate_length)
+                df = _data_utils.mph_filler(df)
+                df = _data_utils.clean_column_names(df)
             results[city] = df
+        print(results.keys())
         self.raw_data = pd.concat(results.values(), sort=False)
+        print(self.raw_data['city'].unique())
         self.raw_data.reset_index(inplace=True)
+        print(self.raw_data['city'].unique())
+        # self.raw_data = _data_utils.clean_column_names(df)
         return self.raw_data
     
     def save(self, filename=None):
@@ -70,20 +79,33 @@ class OSM_retriever():
         
     def _get_cities(self, cities):
         osm_cities = {}
-        if cities.lower() == 'all':
-            osm_cities = self.available_cities     
-        elif isinstance(cities, str):
-            try:
-                osm_cities[cities] = int(self.available_cities[cities])
-            except KeyError:
-                print(f'Queries for {cities} not yet supported')
+        # if cities.lower() == 'all':
+        #     osm_cities = self.available_cities     
+        # elif isinstance(cities, str):
+        #     try:
+        #         osm_cities[cities] = int(self.available_cities[cities])
+        #     except KeyError:
+        #         print(f'Queries for {cities} not yet supported')
+        # else:
+        #     for c in cities:
+        #         try:
+        #             osm_cities[c] = int(self.available_cities[c])
+        #         except KeyError:
+        #             print(f'Queries for {cities} not yet supported')
+        if isinstance(cities, str):
+            if cities.lower() == 'all':
+                osm_cities = self.available_cities
+            else:
+                try:
+                    osm_cities[cities] = int(self.available_cities[cities])
+                except KeyError:
+                    print(f'Queries for {cities} not yet supported')
         else:
             for c in cities:
                 try:
                     osm_cities[c] = int(self.available_cities[c])
                 except KeyError:
-                    print(f'Queries for {cities} not yet supported')
-                    
+                    print(f'Queries for {cities} not yet supported')                    
         return osm_cities
         
     def _get_format(self, results_format):
